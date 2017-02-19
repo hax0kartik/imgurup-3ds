@@ -104,7 +104,7 @@ Result http_upload(const char *url,char *buff)
     u8 *buf, *lastbuf;
     httpcContext context;
 	int ds = 0;
-	ret = httpcOpenContext(&context, HTTPC_METHOD_POST, url, 0);
+	ret = httpcOpenContext(&context, HTTPC_METHOD_POST, url, 1);
     if (ret != 0)
 	{printf("\x1b[31;1merror 0x%08X\n",(int)ret);
 	return 1;
@@ -128,14 +128,9 @@ Result http_upload(const char *url,char *buff)
          }
 		 
 	ret= httpcAddPostDataAscii (&context, (char*)"image",buff);
-	if(ret!=0)
-	printf("\x1b[31;1mRet 0x%08X\n",(int)ret);
-    else
+	printf("\x1b[32;1mRet 0x%08X\n",(int)ret);
     ret= httpcAddPostDataAscii (&context, (char*)"type","base64");
-	if(ret!=0)
-	printf("\x1b[31;1mRet 0x%08X\n",(int)ret);
-    else
-    printf("\x1b[32;1mPost Data Successful\n\x1b[37;1m");
+	printf("\x1b[32;1mRet 0x%08X\n",(int)ret);
     ret = httpcBeginRequest(&context);
     if (ret != 0){
 		 printf("\x1b[31;1merror in HPR 0x%08X\x1b[37;1m\n",(int)ret);
@@ -177,7 +172,10 @@ Result http_upload(const char *url,char *buff)
 	buf = realloc(buf, size);
 	printf("\n");
 	printf("size : %d \n",(int)size);
+	if(size>500)
 	printf("\x1b[32;1mlink :%s\n\x1b[37;1m",text_ex((char*)buf,"<link>","</link>"));
+    else 
+	printf("\x1b[32;1m ERR returned:%s\n\x1b[37;1m", text_ex((char*)buf,"<error>","</error>"));
 	gfxFlushBuffers();
 	gfxSwapBuffers();
 	
@@ -186,9 +184,8 @@ Result http_upload(const char *url,char *buff)
 		free(lastbuf);
 	    return 1;
 		}
-	
     httpcCloseContext(&context);
-
+ 
 	free(buf);
     return 0;
 }
@@ -225,7 +222,7 @@ int main()
 		{
 			if(kDown & KEY_A)
 			{
-			    char *path=tl(swkbd,"Enter the location of the photo");
+			    char *path=tl(swkbd,"Enter the location of the photo Ex:-/in.jpg,/3ds/k.jpg");
 		        char *a=ReadFile(path);
 	            printf("Uploading %s\n",path);
                 ret=http_upload("https://api.imgur.com/3/image.xml",a);

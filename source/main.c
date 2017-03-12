@@ -3,8 +3,27 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <3ds.h>
+#include <stdarg.h>
+#include "common.h"
+#include "error.h"
 unsigned char *buffer;
 char *lobi;
+void error(int error,const char *format, ...)
+{
+   va_list aptr;
+   int done;
+
+   va_start (aptr, format);
+   char buf[500];
+   done =  vsprintf(buf, format, aptr);
+   va_end (aptr);
+   errorConf err;
+   errorInit(&err,ERROR_TEXT_LANGUAGE_WORD_WRAP, CFG_LANGUAGE_EN );
+   errorCode(&err, error);
+   errorText(&err, buf);
+   errorDisp(&err);
+
+}
 static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
                                 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
                                 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
@@ -77,7 +96,7 @@ char *ReadFile(const char *name)
   file = fopen(name , "rb");
   if (!file)
     {
-      printf( "Unable to open file %s", name);
+      error(12,"Unable to open file %s", name);
       return 'e';
     }    
   fseek(file, 0, SEEK_END);
@@ -86,7 +105,7 @@ char *ReadFile(const char *name)
   buffer=(char *)malloc(fileLen+1);
   if (!buffer)
     {
-      fprintf(stderr, "Memory error!");
+      error(13,"%s","Memory error!");
       fclose(file);
       return 'e';
     }                     
@@ -106,24 +125,24 @@ Result http_upload(const char *url,char *buff)
 	int ds = 0;
 	ret = httpcOpenContext(&context, HTTPC_METHOD_POST, url, 1);
     if (ret != 0)
-	{printf("\x1b[31;1merror 0x%08X\n",(int)ret);
+	{    error((int)ret,"error 0x%08X\n",(int)ret);
 	return 1;
 	}
 	
     ret = httpcAddRequestHeaderField(&context, (char*)"User-Agent", (char*)"IMGURUP3DS/1.1");
     if (ret != 0){
-		 printf("\x1b[31;1merror in ARHF 0x%08X\n",(int)ret);
+		  error((int)ret,"error in ARHF 0x%08X\n",(int)ret);
 		  return 1;
          }
 	ret = httpcAddRequestHeaderField(&context,(char*)"Authorization",(char*)"Client-ID 1ec629ae0a99590");	 
      if (ret != 0){
-		 printf("\x1b[31;1merror in ARHF 0x%08X\n",(int)ret);
+		  error((int)error,"error in ARHF 0x%08X\n",(int)ret);
 		  return 1;
          }
 		 
 	ret = httpcSetSSLOpt(&context, 1 << 9);
     if (ret != 0){
-		 printf("\x1b[31;1merror in SSLO 0x%08X\n",(int)ret);
+		  error((int)ret,"error in SSLO 0x%08X\n",(int)ret);
 		  return 1;
          }
 		 
@@ -133,7 +152,7 @@ Result http_upload(const char *url,char *buff)
 	printf("\x1b[32;1mRet 0x%08X\n",(int)ret);
     ret = httpcBeginRequest(&context);
     if (ret != 0){
-		 printf("\x1b[31;1merror in HPR 0x%08X\x1b[37;1m\n",(int)ret);
+		 error((int)ret,"error in HPR 0x%08Xn",(int)ret);
 		  return 1;
          }
 
@@ -142,7 +161,7 @@ Result http_upload(const char *url,char *buff)
     buf = (u8*)malloc(0x1000);
     if (buf == NULL)
 	{
-		printf("\x1b[31;1merror while setting buffer\n\x1b[37;1m");
+		error(98,"error while setting buffer\n");
         return -1;
     //memset(buf, 0, size);
 	}
@@ -175,7 +194,7 @@ Result http_upload(const char *url,char *buff)
 	if(size>500)
 	printf("\x1b[32;1mlink :%s\n\x1b[37;1m",text_ex((char*)buf,"<link>","</link>"));
     else 
-	printf("\x1b[32;1m ERR returned:%s\n\x1b[37;1m", text_ex((char*)buf,"<error>","</error>"));
+	error(123, text_ex((char*)buf,"<error>","</error>"));
 	gfxFlushBuffers();
 	gfxSwapBuffers();
 	
@@ -203,12 +222,14 @@ char *tl(SwkbdState swkbd ,char *texgen)
 int main()
 {
     Result ret=0;
+	osSetSpeedupEnable(true);
     gfxInitDefault();
     httpcInit(0x500000); // Buffer size when POST/PUT.
     consoleInit(GFX_BOTTOM,NULL);
+	consoleInit(GFX_TOP, &topScreen);
 	SwkbdState swkbd;
 	printf("Welcome to IMGURUP-3DS\n");
-	printf("Press A to bring up the keyboard\n");
+	printf("Press B to open the xplorer\n");
 	
     gfxFlushBuffers();
     // Main loop
@@ -220,19 +241,29 @@ int main()
 		u32 kDown = hidKeysDown();
 		if(ret==0)
 		{
-			if(kDown & KEY_A)
+			
+            if(kDown & KEY_B)
 			{
-			    char *path=tl(swkbd,"Enter the location of the photo Ex:-/in.jpg,/3ds/k.jpg");
-		        char *a=ReadFile(path);
-	            printf("Uploading %s\n",path);
-                ret=http_upload("https://api.imgur.com/3/image.xml",a);
-			    if(ret==0)
-			    {
-		         printf("Press A to bring up Keyboard once again.\n");
-			    }
-			  }	
-		    }
-	
+			    gfxFlushBuffers();
+                gfxSwapBuffers();
+				consoleSelect(&topScreen);
+				xplorer();
+				consoleSelect(&topScreen);
+				printf("\x1b[2J");
+	            printf("Uploading :%s\n",current_file);
+				if(current_file[0]!=0)
+				{	
+				    char *a=ReadFile(current_file);
+				    ret=http_upload("https://api.imgur.com/3/image.xml",a);
+					if(ret==0)
+					{ 
+					for(int i=0;i<=511;i++)current_file[i]='\0';
+					printf("Press B to open the explorer.\n");
+					}
+				}
+			}				
+		    
+	    }
         if (kDown & KEY_START)
             break; // break in order to return to hbmenu
         // Flush and swap framebuffers

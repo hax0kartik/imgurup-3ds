@@ -5,13 +5,13 @@
 Steps:-
 ------
 
-Press A to bring up the keyboard.
+Press B to open the explorer.
 
-Type in the location of the photo.
+Select a photo.
 
 PROFIT !
 
 Credits:-
-------
+--------
 
-@thatguywiththatname for 3ds-FB
+@thatguywiththatname  for 3ds-FB

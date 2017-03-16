@@ -8,22 +8,30 @@
 #include "error.h"
 unsigned char *buffer;
 char *lobi;
+char links[1024];
 void error(int error,const char *format, ...)
 {
    va_list aptr;
-   int done;
-
    va_start (aptr, format);
    char buf[500];
-   done =  vsprintf(buf, format, aptr);
+   vsprintf(buf, format, aptr);
    va_end (aptr);
    errorConf err;
    errorInit(&err,ERROR_TEXT_LANGUAGE_WORD_WRAP, CFG_LANGUAGE_EN );
    errorCode(&err, error);
    errorText(&err, buf);
    errorDisp(&err);
-
 }
+void wlink(const char *a,const char *b){  
+FILE *pFile;
+char buffer[256];
+char *k=strrchr(a,'/');
+sprintf(buffer,"\n%s : %s",a,k);
+pFile=fopen("upload_links.txt", "a+");
+fprintf(pFile, "%s", buffer);
+fclose(pFile);
+}
+
 static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
                                 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
                                 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
@@ -194,7 +202,10 @@ Result http_upload(const char *url,char *buff)
 	if(size>500)
 	printf("\x1b[32;1mlink :%s\n\x1b[37;1m",text_ex((char*)buf,"<link>","</link>"));
     else 
+	{
 	error(123, text_ex((char*)buf,"<error>","</error>"));
+     ret = 1;
+	}
 	gfxFlushBuffers();
 	gfxSwapBuffers();
 	
@@ -206,6 +217,8 @@ Result http_upload(const char *url,char *buff)
     httpcCloseContext(&context);
  
 	free(buf);
+	if(ret==0)
+	strcpy(links,text_ex((char*)buf,"<link>","</link>"));
     return 0;
 }
 char mybuf[100];
@@ -257,6 +270,7 @@ int main()
 				    ret=http_upload("https://api.imgur.com/3/image.xml",a);
 					if(ret==0)
 					{ 
+				    wlink(links,current_file);
 					for(int i=0;i<=511;i++)current_file[i]='\0';
 					printf("Press B to open the explorer.\n");
 					}

@@ -21,7 +21,7 @@ PrintConsole topScreen, instructionscreen, debugscreen;
 // Max len of file/directory name
 int MAX_DIR_NAME_SIZE = 261;
 // What it says on the tin
-int MAX_FILES_ON_SCREEN = 26;
+int MAX_FILES_ON_SCREEN = 29;
 // ^
 int MAX_PATH_SIZE = 511;
 
@@ -30,8 +30,9 @@ int xplorer(void) {
     // Initialize console for both screens using the two different PrintConsole
     consoleInit(GFX_BOTTOM, &debugscreen);
     consoleInit(GFX_BOTTOM, &instructionscreen);
-	consoleInit(GFX_TOP, &topScreen);
-	printf("Top SCreen working");
+    consoleInit(GFX_TOP, &topScreen);
+	//printf("Top SCreen working");
+	//gfxSetDoubleBuffering(GFX_TOP,true);
     consoleSetWindow(&instructionscreen, 0, 0, 40, 8);
     consoleSetWindow(&debugscreen, 0, 9, 40, 21);
     consoleSelect(&instructionscreen);
@@ -48,24 +49,26 @@ int xplorer(void) {
     size_of_file_array = 1;
 
     strcpy(current_path, "sdmc:/");
-    get_all_in_dir(current_path);      // Fill file name array with file names
+    get_all_in_dir(current_path); 
+	//disp_fix();
+	// Fill file name array with file names
     print_all_values_in_filear();      // Print all in /
-
+    u64 min=0;
     // Main loop
-    while (aptMainLoop()) {
+	 while (aptMainLoop()) {
 
-        gspWaitForVBlank();
         hidScanInput();
 
         u32 kDown = hidKeysDown();
-
-
-        if (kDown & KEY_UP) {
+	u32 kHeld = hidKeysHeld();
+        if(kDown)
+	min=osGetTime();
+        if ((kDown & KEY_UP)|((kHeld & KEY_UP)&&(osGetTime() - min>500))) {
             up();
             print_all_values_in_filear();
         }
 
-        else if (kDown & KEY_DOWN) {
+        else if ((kDown & KEY_DOWN)||((kHeld & KEY_DOWN)&&(osGetTime() - min>500))) {
             down();
             print_all_values_in_filear();
         }
@@ -82,7 +85,7 @@ int xplorer(void) {
 
         else if (kDown & KEY_A) {
             a_pressed();
-			if(current_file[0]!=0)
+		if(current_file[0]!=0)
 			break;	
         }
 
@@ -91,10 +94,11 @@ int xplorer(void) {
             get_all_in_dir(current_path);
             print_all_values_in_filear();
         }
+	else if(kDown & KEY_START)
+		break;
 
-        // Flush and swap framebuffers
-        gfxFlushBuffers();
-        gfxSwapBuffers();
+	 
+       gfxSwapBuffers();
     }
 
     // Clear up allocated memory

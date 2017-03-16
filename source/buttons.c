@@ -73,6 +73,8 @@ void a_pressed(void) {
             strcat(current_path, "/");
             printf("\x1b[32mnew path: %s\x1b[0m\n", current_path);
             get_all_in_dir(current_path);
+			consoleSelect(&topScreen);
+			printf("\x1b[2J");
             print_all_values_in_filear();
         }
 
@@ -97,9 +99,11 @@ void a_pressed(void) {
 
 void b_pressed(void) {
     consoleSelect(&debugscreen);
-
+    
     if (!strcmp(current_path, "sdmc:/")) { printf("\x1b[32mcurrently in sdmc:/\x1b[0m\n"); }
-
+    		
     // move up a directory
     else { get_ud(); }
+	consoleSelect(&topScreen);
+			printf("\x1b[2J");
 }
